@@ -4,7 +4,7 @@
 After all files are configured in accordance with [config.md](config.md). Execute:
 
 ```
-ansible-playbook bootiso.yml
+ansible-playbook mk_bootiso.yml
 ```
 
 When finished the file
