@@ -1,0 +1,119 @@
+#_preseed_V1
+#### Contents of the preconfiguration file (for bookworm)
+
+### Mirror settings
+# If you select ftp, the mirror/country string does not need to be set.
+#d-i mirror/protocol string ftp
+d-i mirror/country string manual
+d-i mirror/http/hostname string debian.telecoms.bg
+d-i mirror/http/directory string /debian
+d-i mirror/http/proxy string
+
+### Account setup
+# Skip creation of a normal user account
+d-i passwd/make-user boolean true
+d-i passwd/root-password-crypted password {{ encrypted_pw }}
+d-i passwd/user-fullname string {{ user_gecos }}
+d-i passwd/username string {{ user_name }}
+d-i passwd/user-password-crypted password {{ encrypted_pw }}
+
+### Clock and time zone setup
+# Controls whether or not the hardware clock is set to UTC.
+d-i clock-setup/utc boolean true
+
+# You may set this to any valid setting for $TZ; see the contents of
+# /usr/share/zoneinfo/ for valid values.
+d-i time/zone string {{ TZ }}
+
+# Partitioning
+d-i partman-auto/disk string /dev/{{ BOOT }}
+d-i partman-lvm/device_remove_lvm boolean true
+d-i partman-auto/method string lvm
+d-i partman-lvm/confirm boolean true
+d-i partman-auto/choose_recipe select mypartitioning
+d-i partman-auto-lvm/new_vg_name string vg00
+d-i partman-auto-lvm/guided_size string max
+d-i partman-lvm/confirm_nooverwrite boolean true
+
+d-i partman-auto/expert_recipe string                         \
+      mypartitioning ::                                       \
+              512 1 512 xfs                                   \
+                      $primary{ } $bootable{ }                \
+                      method{ format } format{ }              \
+                      use_filesystem{ } filesystem{ xfs }     \
+                      mountpoint{ /boot }                     \
+              .                                               \
+              1024 1 1024 linux-swap                          \
+                      $defaultignore{ }                       \
+                      $lvmok{ }                               \
+                      lv_name{ swap }                         \
+                      in_vg { vg00 }                          \
+                      method{ swap } format{ }                \
+              .                                               \
+              8192 1 1000000000 xfs                           \
+                      $defaultignore{ }                       \
+                      $lvmok{ }                               \
+                      lv_name{ root }                         \
+                      in_vg { vg00 }                          \
+                      method{ format } format{ }              \
+                      use_filesystem{ } filesystem{ xfs }     \
+                      mountpoint{ / }                         \
+              .
+
+d-i partman-partitioning/confirm_write_new_label boolean true
+d-i partman/choose_partition select finish
+d-i partman/confirm boolean true
+d-i partman/confirm_nooverwrite boolean true
+
+### Base system installation
+
+### Package selection
+tasksel tasksel/first multiselect standard
+# Individual additional packages to install
+d-i pkgsel/include string openssh-server net-tools vim sudo
+popularity-contest popularity-contest/participate boolean false
+
+### Boot loader installation
+# This is fairly safe to set, it makes grub install automatically to the UEFI
+# partition/boot record if no other operating system is detected on the machine.
+d-i grub-installer/only_debian boolean true
+d-i grub-installer/with_other_os boolean true
+d-i grub-installer/bootdev string /dev/{{ BOOT }}
+
+### Finishing up the installation
+# Avoid that last message about the install being complete.
+d-i finish-install/reboot_in_progress note
+
+#### Advanced options
+### Running custom commands during the installation
+# d-i preseeding is inherently not secure. Nothing in the installer checks
+# for attempts at buffer overflows or other exploits of the values of a
+# preconfiguration file like this one. Only use preconfiguration files from
+# trusted locations! To drive that home, and because it's generally useful,
+# here's a way to run any shell command you'd like inside the installer,
+# automatically.
+
+# This command is run just before the install finishes, but when there is
+# still a usable /target directory. You can chroot to /target and use it
+# directly, or use the apt-install and in-target commands to easily install
+# packages and run commands in the target system.
+
+d-i preseed/early_command string
+    sed -i '/^iface {{ hostvars[item].NIC }}  inet/i auto {{ hostvars[item].NIC }} ' /etc/network/interfaces
+
+d-i preseed/late_command string \
+  in-target bash -c "sed -i 's\#PermitRootLogin.*\PermitRootLogin yes\g' /etc/ssh/sshd_config"; \
+  in-target bash -c "sed -i '/^127.0.1.1/d' /etc/hosts"; \
+  in-target apt-mark hold ifupdown2; \
+  mkdir -m 0700 /target/home/{{ user_name }}/.ssh ; \
+    touch /target/home/{{ user_name }}/.ssh/authorized_keys ; \
+    chmod 0600 /target/home/{{ user_name }}/.ssh/authorized_keys ; \
+    chown -R {{ user_uid }}:{{ user_uid }} /target/home/{{ user_name }}/.ssh ; \
+    echo {{ SSH_KEY }} >> /target/home/{{ user_name }}/.ssh/authorized_keys ; \
+    echo "{{ user_name }} ALL=(ALL) NOPASSWD: ALL" >> /target/etc/sudoers.d/{{ user_name }} ; \
+    echo blacklist hpwdt >> /target/etc/modprobe.d/blacklist.conf; \
+  in-target apt remove -y os-prober
+
+# Note: options passed to the installer will be added automatically. 
+# # Avoid that last message about the install being complete.
+d-i finish-install/reboot_in_progress note

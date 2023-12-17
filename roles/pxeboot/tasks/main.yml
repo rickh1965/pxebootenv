@@ -1,0 +1,7 @@
+---
+# tasks file for pxeboot
+
+  - name: Install Necessary Packages
+    include_tasks: mk_pxebootserver.yml
+
+

@@ -1,0 +1,164 @@
+---
+- hosts: localhost
+  gather_facts: true
+  become: true
+  tasks:
+  
+    - name: Install syslinux and genisoimage
+      dnf:
+        name:
+        - syslinux
+        - genisoimage
+        state: latest
+        update_cache: true
+    
+    - name: Download Rocky Linux distribution
+      get_url:
+        url: "{{ linux_iso }}"
+        dest: "{{ iso_target }}"
+        mode: '0644'
+        checksum: "{{ rockyiso_sum }}"
+    
+    - name: Make mounting directory
+      ansible.builtin.file:
+        path: "{{ mount_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Mount ISO file locally
+      ansible.posix.mount:
+        path: "{{ mount_dir }}"
+        src: "{{ iso_target }}"
+        fstype: iso9660
+        opts: ro
+        fstab: /tmp/tmp.fstab
+        state: mounted
+    
+    - name: Make working directory
+      ansible.builtin.file:
+        path: "{{ work_dir }}"
+        state: directory
+        mode: '0755'
+    
+    - name: Copy ISO into working directory
+      ansible.posix.synchronize:
+        src: "{{ mount_dir }}/"
+        dest: "{{ work_dir }}"
+    
+    - name: recursively update permissions of { work_dir } directory
+      file:
+        path: "{{ work_dir }}"
+        state: directory
+        recurse: yes
+        mode: 0755
+    
+    - name: Unmount ISO file
+      ansible.posix.mount:
+        path: "{{ mount_dir }}"
+        fstab: /tmp/tmp.fstab
+        state: absent
+    
+    - name: blkid info from downloaded ISO
+      shell: 'blkid "{{ iso_target }}"'
+      register: results
+    
+    - name: Parse out Volume Label from blkid
+      set_fact:
+        myvalue: "{{ results.stdout.split('\"') }}"
+      vars: 
+        regexp: 'value=\"([^"]+)'
+    
+    - name: Set to label variable
+      set_fact:
+        label: "{{ myvalue[5] }}"
+    
+    - name: print volume label
+      debug:
+        var: label
+    
+          ## - name: Remove ISO download from filesystem
+          ## file:
+          ## path: "{{ iso_target }}" 
+          ## state: absent
+    
+    - name: remove default option - isolinux/isolinux.cfg
+      replace:
+        path: "{{ work_dir }}/isolinux/isolinux.cfg"
+        regexp: 'menu default'
+        replace: ''
+    
+    - name: put in ks stub and add default option- isolinux/isolinux.cfg
+      replace:
+        path: "{{ work_dir }}/isolinux/isolinux.cfg"
+        regexp: '{{ label }} quiet'
+        replace: '{{ label }} inst.ks=hd:LABEL={{ label }}:/ks.cfg\n  menu default'
+    
+    - name: Move default option - EFI/BOOT/grub.cfg
+      replace:
+        path: "{{ work_dir }}/EFI/BOOT/grub.cfg"
+        regexp: 'set default="1"'
+        replace: 'set default="0"'
+    
+    - name: put in ks stub - EFI/BOOT/grub.cfg
+      replace:
+        path: "{{ work_dir }}/EFI/BOOT/grub.cfg"
+        regexp: '{{ label }} quiet'
+        replace: '{{ label }} inst.ks=hd:LABEL={{ label }}:/ks.cfg'
+    
+    - name: Mount ISO UEFI Image file
+      ansible.posix.mount:
+        path: "{{ mount_dir }}"
+        src: "{{ work_dir }}/images/efiboot.img"
+        fstype: vfat
+        opts: rw
+        fstab: /tmp/tmp.fstab
+        state: mounted
+    
+    - name: Copy grub.cfg into UEFI image
+      ansible.builtin.copy:
+        src: "{{ work_dir }}/EFI/BOOT/grub.cfg"
+        dest: "{{ mount_dir }}/EFI/BOOT/grub.cfg"
+        owner: root
+        group: root
+        mode: '0755'
+        force: yes
+    
+    - name: Unmount ISO UEFI Image file
+      ansible.posix.mount:
+        path: "{{ mount_dir }}"
+        fstab: /tmp/tmp.fstab
+        state: absent
+    ##
+    - name: Create generic kickstart file
+      template:
+        src: roles/pxeboot/templates/ks.pxe.cfg.j2
+        dest: "{{ work_dir }}/ks.cfg"
+        owner: root
+        group: root
+        mode: 0644
+    
+    - name: mkisofs
+      ansible.builtin.shell: mkisofs -o ../"{{ pxe_server_name }}".iso -b isolinux/isolinux.bin -J -R -l -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e images/efiboot.img -no-emul-boot -graft-points -joliet-long -V {{ label }} .
+      args:
+        chdir: "{{ work_dir }}"
+    
+    - name: isohybrid
+      ansible.builtin.shell: isohybrid --uefi ../"{{ pxe_server_name }}".iso
+      args:
+        chdir: "{{ work_dir }}"
+    
+    - name: implantisomd5
+      ansible.builtin.shell: implantisomd5 ../"{{ pxe_server_name }}".iso
+      args:
+        chdir: "{{ work_dir }}"
+    
+    - name: Clean up mounting directory
+      file:
+        path: "{{ mount_dir }}"
+        state: absent
+    
+    - name: Clean up working directory
+      file:
+        path: "{{ work_dir }}"
+        state: absent
+    

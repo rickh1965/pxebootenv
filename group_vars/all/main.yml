@@ -1,0 +1,50 @@
+---
+
+######################### PXE boot server variables #########################
+
+pxe_server_nic: "eth0"				## PXE NIC device name
+dhcp_domain: "home.lan"				## Your Environment domain name
+dhcp_gw: "192.168.1.1"				## Your Environment default gateway
+dhcp_range: "192.168.1.100,192.168.1.120"	## DHCP Range the PXE Server will manage
+netmask: "255.255.255.0"			## Your Environment netmask
+lease_time: "1h"				## DHCP Lease time
+pxe_server_ip: "192.168.1.3"			## IP of PXE/DHCP Server to install to 
+pxe_server_name: "pxe"				## hostname of new PXE/DHCP server
+dns_ip: "192.168.1.5"				## Your environment local DNS server
+broadcast_address: "192.168.1.255"		## Your environment broadcast address
+ntp_server: "192.168.1.1"			## Your environment NTP server
+site_message: "Your Sitename"			## Your environment name display on PXE boot menu
+work_dir: ./work_dir				## Temp directory for moving bootstrap files
+storage_device: "sda"				## Device name of primary boot on PXE server
+user_name: "admin"				## Administrative user name
+user_uid: "1000"				## Administrative UID
+user_gecos: "Admin User"			## Admin full name
+TZ: America/Chicago				## Timezone
+encrypted_pw: <<REDACTED>>
+## 						   Encrypted Password hash. Follow README instructions to generate
+SSH_KEY: <<REDACTED>>
+## 						   SSH key from .pub file in admin user home directory
+
+######################### DO NOT EDIT BELOW THIS LINE #########################
+
+#################### preseed variables
+HOST: "localhost"
+NIC: "eth0"
+MAC: "ff:ff:ff:ff:ff"
+IP: "192.168.1.251"
+TYPE: "debian"
+BOOT: "sda"
+
+#################### variables for mounting Rocky Linux ISO
+linux_iso: https://dl.rockylinux.org/vault/rocky/8.6/isos/x86_64/Rocky-x86_64-minimal.iso
+iso_target: /tmp/Rocky-x86_64-minimal.iso
+rockyiso_sum: sha256:a9ece0e810275e881abfd66bb0e59ac05d567a5ec0bc2f108b9a3e90bef5bf94
+mount_dir: /temp_mnt
+
+#################### variables for mounting Debian ISO
+debian_net_installer: https://ftp.debian.org/debian/dists/bookworm/main/installer-amd64/current/images/netboot/netboot.tar.gz
+debian_nonfree: https://cdimage.debian.org/cdimage/unofficial/non-free/firmware/stable/current/firmware.cpio.gz
+net_boot: /tmp/netboot.tar.gz
+debian_iso: https://cdimage.debian.org/mirror/cdimage/archive/12.2.0/amd64/iso-cd/debian-12.2.0-amd64-netinst.iso
+net_boot_fw: /tmp/newinit/firmware.cpio.gz
+debian_iso_target: ./debian-12.2.0-amd64-netinst.iso

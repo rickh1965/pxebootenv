@@ -1,0 +1,237 @@
+- name: Upgrade all packages
+  dnf:
+    name: '*'
+    state: latest
+
+- name: Install packages for PXE boot server
+  dnf:
+    name:
+    - dnsmasq
+    - syslinux
+    - tftp-server
+    - vsftpd
+    state: latest
+    update_cache: true
+
+- name: Create dnsmasq file
+  template:
+    src: templates/dnsmasq.conf.j2
+    dest: /etc/dnsmasq.conf
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Copy bootloader files to the tftp server path
+  ansible.posix.synchronize:
+    src:  /usr/share/syslinux/
+    dest: /var/lib/tftpboot
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Create pxelinux.cfg directory under tftpboot
+  file:
+    path:  /var/lib/tftpboot/pxelinux.cfg
+    state: directory
+    
+- name: Create default menu file 
+  template:
+    src: templates/pxelinuxcfg.default.j2
+    dest: /var/lib/tftpboot/pxelinux.cfg/default
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Download Rocky Linux distribution
+  get_url:
+    url: "{{ linux_iso }}"
+    dest: "{{ iso_target }}"
+    mode: '0644'
+    tmp_dest: /tmp/
+    checksum: "{{ rockyiso_sum }}"
+
+- name: Mount ISO file locally
+  ansible.posix.mount:
+    path: "{{ mount_dir }}"
+    src: "{{ iso_target }}"
+    fstype: iso9660
+    opts: ro
+    state: mounted
+
+- name: Create Rocky directory under tftpboot
+  file:
+    path:  /var/lib/tftpboot/rocky8
+    state: directory
+
+- name: Copy bootable kernel and initrd images from mounted ISO to Rocky8 directory
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest:  /var/lib/tftpboot/rocky8
+    remote_src: yes
+  with_items:
+    - '{{ mount_dir }}/images/pxeboot/vmlinuz'
+    - '{{ mount_dir }}/images/pxeboot/initrd.img'
+
+- name: Copy mounted OS files to default vsftpd server path
+  ansible.posix.synchronize:
+    src:  "{{ mount_dir }}/"
+    dest: /var/ftp/pub
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Unmount ISO file
+  ansible.posix.mount:
+    path: "{{ mount_dir }}"
+    state: absent
+
+- name: Create directory for various kickstart cfg files
+  file:
+    path:  /var/ftp/pub/ks
+    state: directory
+ 
+
+- name: Create generic kickstart file
+  template:
+    src: templates/ks.cfg.j2
+    dest: /var/ftp/pub/ks/ks.cfg
+    owner: root
+    group: root
+    mode: 0644
+
+- name: Create generic preseed file
+  template:
+    src: templates/debian.generic.j2
+    dest: /var/ftp/pub/ks/preseed.cfg
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: Set permissions and ownership of vsftp server files
+  ansible.builtin.file:
+    path: /var/ftp/pub
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: Enable anonymous ftp for vsftp to serve media
+  ansible.builtin.lineinfile:
+    path: /etc/vsftpd/vsftpd.conf
+    regexp: '^anonymous_enable='
+    line: anonymous_enable=YES
+
+- name: open ports for PXE boot 
+  ansible.posix.firewalld:
+    port: "{{ item }}"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  with_items:
+    - 69/udp  
+    - 4011/udp  
+
+- name: open services for PXE boot 
+  ansible.posix.firewalld:
+    service: "{{ item }}"
+    permanent: yes
+    immediate: yes
+    state: enabled
+  with_items:
+    - ftp  
+    - dns  
+    - dhcp  
+
+- name: Create temp netinstall directory if it does not exist
+  ansible.builtin.file:
+    path: /tmp/newinit
+    state: directory
+    mode: '0755'
+      
+- name: Add debian 64-bit Netboot archive 
+  get_url:
+    url: "{{ debian_net_installer }}"
+    dest: "{{ net_boot }}"
+    mode: '0644'
+
+- name: Add debian 64-bit nonfree firmware
+  get_url:
+    url: "{{ debian_nonfree }}"
+    dest: "{{ net_boot_fw }}"
+    mode: '0644'
+
+- name: Extract netboot.tar.gz into CWD
+  ansible.builtin.unarchive:
+    src: "{{ net_boot }}"
+    remote_src: yes
+    dest: /tmp
+
+- name: Copy bootloader files to the tftp server path
+  ansible.posix.synchronize:
+    src: /tmp/debian-installer
+    dest: /var/lib/tftpboot/
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Copy initrd.gz initrd.gz.ORIG
+  copy: 
+    remote_src: True 
+    src: /var/lib/tftpboot/debian-installer/amd64/initrd.gz
+    dest: /tmp/newinit/initrd.gz.ORIG
+
+- name: Remove initrd.gz
+  file: 
+    path: /var/lib/tftpboot/debian-installer/amd64/initrd.gz
+    state: absent
+
+- name: Concatenate initrd and firmware into new initrd.gz
+  ansible.builtin.shell: /bin/cat /tmp/newinit/initrd.gz.ORIG {{ net_boot_fw }}  > /var/lib/tftpboot/debian-installer/amd64/initrd.gz
+  register: new_initrd
+
+- name: Download Debian distribution
+  get_url:
+    url: "{{ debian_iso }}"
+    dest: "{{ debian_iso_target }}"
+    mode: '0644'
+
+- name: Mount ISO file locally
+  ansible.posix.mount:
+    path: "{{ mount_dir }}"
+    src: "{{ debian_iso_target }}"
+    fstype: iso9660
+    opts: ro
+    state: mounted
+
+- name: Copy mounted OS files to default vsftpd server path
+  ansible.posix.synchronize:
+    src:  "{{ mount_dir }}/"
+    dest: /var/lib/tftpboot/debian-installer/amd64
+  delegate_to: "{{ inventory_hostname }}"
+
+- name: Unmount ISO file
+  ansible.posix.mount:
+    path: "{{ mount_dir }}"
+    state: absent
+
+- name: unconditionally restart and enable dnsmasq and vsftpd
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+    enabled: true     
+  with_items:
+    - dnsmasq
+    - vsftpd    
+
+- name: Create configuration files
+  template:
+    src: templates/{{ hostvars[item].TYPE }}.cfg.j2
+    dest: /var/ftp/pub/ks/{{ hostvars[item].inventory_hostname }}.cfg
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - "{{ hostvars[inventory_hostname].groups['managed_servers'] }}"
+
+- name: Create menu files
+  template:
+    src: templates/menu.{{ hostvars[item].TYPE }}.j2
+    dest: /var/lib/tftpboot/pxelinux.cfg/01-{{ hostvars[item].MAC }}
+    owner: root
+    group: root
+    mode: 0644
+  with_items:
+    - "{{ hostvars[inventory_hostname].groups['managed_servers'] }}"

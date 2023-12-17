@@ -1,0 +1,21 @@
+interface= {{ pxe_server_nic }},lo
+#bind-interfaces
+domain={{ dhcp_domain }}
+# DHCP range-leases
+dhcp-range= {{ pxe_server_nic }},{{ dhcp_range }},{{ netmask }},{{ lease_time }}
+# PXE
+dhcp-boot=pxelinux.0,pxeserver, {{ pxe_server_ip }}
+# Gateway
+dhcp-option=3,{{ dhcp_gw }}
+# DNS
+dhcp-option=6,{{ dns_ip }}, 8.8.8.8
+server=8.8.4.4
+# Broadcast Address
+dhcp-option=28,{{ broadcast_address }}
+# NTP Server
+dhcp-option=42,{{ ntp_server }} 
+
+pxe-prompt=" Press F8 for menu." , 0
+pxe-service=x86PC, " {{ site_message }} " , pxelinux
+enable-tftp
+tftp-root=/var/lib/tftpboot

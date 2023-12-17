@@ -1,0 +1,44 @@
+all:
+  hosts:
+  children:
+    pxe:
+      hosts:
+        pxe.home.lan:
+    managed_servers:
+      hosts:
+        pve01.home.lan:
+          IP: 192.168.1.21
+          MAC: 44-1e-a1-60-52-90
+          NIC: enp3s0f0
+          boot: sda
+          P410: yes
+          TYPE: debian
+        pve02.home.lan:
+          IP: 192.168.1.22
+          MAC: b4-b5-2f-63-fb-c0
+          NIC: enp3s0f0
+          boot: sda
+          P410: yes
+          TYPE: debian
+        pve03.home.lan:
+          IP: 192.168.1.23
+          MAC: 80-c1-6e-78-46-30
+          NIC: enp3s0f0
+          boot: sda
+          P410: yes
+          TYPE: debian
+        rh03.home.lan:
+          IP: 192.168.1.91
+          MAC: 40-a8-f0-40-43-86
+          NIC: eno1
+          boot: sda
+          P410: no
+          TYPE: rocky
+        testrl.home.lan:
+          IP: 192.168.1.92
+          MAC: f8-b1-56-a8-20-b4
+          NIC: eno1
+          boot: sda
+          P410: no
+          TYPE: rocky
+

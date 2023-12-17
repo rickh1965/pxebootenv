@@ -1,0 +1,73 @@
+## SELinux configuration
+#selinux --enforcing
+## Firewall configuration
+#firewall --enabled --ssh
+#firstboot --disable
+# System authorisation information
+# auth --useshadow --passalgo=sha512
+# Use network installation
+#version=RHEL8
+# Use graphical install
+graphical
+
+repo --name="Minimal" --baseurl=file:///run/install/sources/mount-0000-cdrom/Minimal
+
+%packages
+@^server-product-environment
+kexec-tools
+
+%end
+
+# Keyboard layouts
+keyboard us
+# System language
+lang en_US.UTF-8
+
+# Reboot after installation
+reboot
+
+# Network information
+network --bootproto=static --device={{ pxe_server_nic }} --gateway={{ dhcp_gw }} --ip={{ pxe_server_ip }} --netmask={{ netmask }} --nameserver={{ dns_ip }} --noipv6 --onboot=on --activate
+network --hostname={{ pxe_server_name }}
+
+# Use network installation
+url --url="http://dl.rockylinux.org/vault/rocky/8.6/BaseOS/$basearch/os/"
+repo --name="BaseOS" --baseurl=http://dl.rockylinux.org/vault/rocky/8.6/BaseOS/$basearch/os/ --cost=200
+repo --name="AppStream" --baseurl=http://dl.rockylinux.org/vault/rocky/8.6/AppStream/$basearch/os/ --cost=200
+
+# Use CDROM installation media
+cdrom
+
+# Run the Setup Agent on first boot
+firstboot --enable
+
+zerombr
+clearpart --all --initlabel
+autopart --type=lvm --nohome
+
+# System timezone
+timezone {{ TZ }} --isUtc
+
+# Root password
+rootpw --iscrypted {{ encrypted_pw }}
+user --groups=wheel --name={{ user_name }} --password={{ encrypted_pw }} --uid={{ user_uid }} --gid={{ user_uid }} --iscrypted --gecos="{{ user_gecos }}"
+
+%addon com_redhat_kdump --disable --reserve-mb='auto'
+
+%end
+
+%post
+/bin/mkdir /home/{{ user_name }}/.ssh
+/bin/chmod 700 /home/{{ user_name }}/.ssh
+/bin/echo {{ SSH_KEY }} > /home/{{ user_name }}/.ssh/authorized_keys
+/bin/chown -R {{ user_uid }}:{{ user_uid }} /home/{{ user_name }}/.ssh
+/bin/chmod 0400 /home/{{ user_name }}/.ssh/*
+/bin/echo "{{ user_name }} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/{{ user_name }} ; \
+%end
+
+
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end

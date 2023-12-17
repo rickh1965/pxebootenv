@@ -1,0 +1,14 @@
+default menu.c32
+prompt 0
+timeout 300
+ONTIMEOUT local
+menu title ########## {{ site_message }} ##########
+
+LABEL local
+        MENU LABEL Boot local hard drive
+        LOCALBOOT 0
+
+label install
+menu label Install Rocky 8 x64 on {{ HOST }}
+kernel rocky8/vmlinuz
+append initrd=rocky8/initrd.img inst.method=ftp://{{ pxe_server_ip }}/pub/  inst.ks=ftp://{{ pxe_server_ip }}/pub/ks/{{ HOST }}.cfg

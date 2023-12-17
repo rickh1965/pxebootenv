@@ -1,0 +1,171 @@
+---
+- hosts: managed_servers
+  gather_facts: true
+  become: true
+  tasks:
+    - name: Test for Proxmox
+      stat:
+        path: /etc/pve
+      register: is_proxmox
+
+    - name: Fail if it doesn't have a P410 controller
+      fail:
+        msg: This Playbook is intended for servers with HP Smart Array P410 Controller only.
+      when: not hostvars[inventory_hostname].P410
+    
+    - name: Fail if not a Proxmox host
+      fail:
+        msg: This Playbook is intended for Proxmox hosts only.  
+      when: not is_proxmox.stat.exists
+    
+    - name: Get arch
+      command: "dpkg --print-architecture"
+      register: arch
+    
+    - name: create repo for github
+      lineinfile:
+        path: /etc/apt/sources.list.d/github-cli.list
+        line: deb [arch={{ arch.stdout }} signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main
+        create: yes
+    
+    - name: Generate keyring for github repo
+      ansible.builtin.get_url:
+        url: https://cli.github.com/packages/githubcli-archive-keyring.gpg
+        dest: /usr/share/keyrings/githubcli-archive-keyring.gpg
+        mode: '0644'
+    
+    - name: Update your repository and system
+      become: true
+      apt:
+        upgrade: yes
+        update_cache: yes
+    
+    - name: Install Necessary packages for Install
+      ansible.builtin.apt:
+        name:
+          - make
+          - gcc
+          - git
+          - pandoc
+          - wget
+          - sudo
+          - htop
+          - iotop
+          - sdparm
+          - screen
+          - postfix
+          - open-iscsi
+          - curl
+          - pve-headers
+          - dkms
+          - gh
+        state: latest
+    
+    - name: Add HP blacklist to modprobe.conf
+      lineinfile:
+        path: /etc/modprobe.d/blacklist-hp.conf
+        line: blacklist hpwdt
+        create: yes
+    
+    - name:  Check if hpsahba has already been cloned
+      stat:
+        path: "/root/hpsahba"
+      register: already_cloned
+    
+    - name: Clone hpsahba repo if first time through
+      ansible.builtin.git:
+        repo: https://github.com/99dimitris/hpsahba.git
+        dest: /root/hpsahba
+      when: not already_cloned.stat.exists
+    
+    - name: Build hpsahba executable
+      make:
+        chdir: /root/hpsahba
+    
+    - name: Get Running firmware Version on HBA
+      shell:  "/root/hpsahba/hpsahba -i /dev/sg0"
+      register: results
+    - set_fact:
+        myvalue: "{{ results.stdout | regex_search(regexp,'\\1') | replace(\"'\",'')  }}"
+      vars:
+        regexp: RUNNING_FIRM_REV=([^\"].+)
+    
+    - name: Check Firmware version
+      fail:
+        msg: Firmware must be updated to version 6.64 it appears to be {{ myvalue }}
+      when:  not myvalue|regex_search('6.64')
+    
+    - name: show version
+      debug:
+        msg: "{{ myvalue }}"
+    
+    - name: Enable HBA mode on p410 Controller
+      shell:  "echo YES | /root/hpsahba/hpsahba -E /dev/sg0"
+      register: hba_status
+    
+    - name: Fix dkms make file
+      replace:
+        path: /root/hpsahba/contrib/dkms/Makefile
+        regexp: '^KDIR := /usr/lib'
+        replace: "KDIR := /lib"
+    
+    - name: parse kernel header info
+      shell: "uname -r"
+      register: kernel_version
+    - set_fact:
+        uname: "{{ kernel_version.stdout }}"
+    - set_fact:
+        major_version: "{{ uname.split('.')[0] }}"
+        minor_version: "{{ uname.split('.')[1] }}"
+    - set_fact:
+        header: "{{ major_version }}.{{ minor_version }}-patchset-v2"
+    
+    - name: show kernel version
+      debug:
+        msg: "{{ header }}"
+    
+    
+    - name: link newest patchset headers to current
+      ansible.builtin.file:
+        src: /root/hpsahba/kernel/5.18-patchset-v2
+        dest: /root/hpsahba/kernel/{{ header }}
+        owner: root
+        group: root
+        state: link
+    
+    - name: Fix patch.sh file
+      replace:
+        path: /root/hpsahba/contrib/dkms/install.sh
+        regexp: patch.sh$
+        replace: patch.sh {{ major_version }}.{{ minor_version }}
+    
+    - name: Run commands to finish installation
+      command: "{{ item }}"
+      args:
+        chdir: /root/hpsahba/contrib/dkms
+      with_items:
+        - "./patch.sh"
+        - "dkms add ./"
+        - "dkms install --force hpsa-dkms/10.0"
+        - "modprobe -r hpsa"
+        - "modprobe hpsa hpsa_use_nvram_hba_flag=1"
+      ignore_errors: true
+    
+    - name: Add hba_flag
+      lineinfile:
+        path: /etc/modprobe.d/hpsa.conf
+        line: "options hpsa hpsa_use_nvram_hba_flag=1"
+        create: yes
+    
+    - name: update initramfs
+      shell: update-initramfs -u
+    
+    - name: Unconditionally reboot the machine with all defaults
+      ansible.builtin.reboot:
+    
+    - name: display newly found disks with lsblk
+      shell: lsblk
+      register: lsblk_output
+    
+    - debug:
+        msg: "{{lsblk_output.stdout_lines}}"

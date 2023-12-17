@@ -1,0 +1,6 @@
+---
+- hosts: pxe.home.lan
+  gather_facts: true
+  become: true
+  roles:
+    - pxeboot

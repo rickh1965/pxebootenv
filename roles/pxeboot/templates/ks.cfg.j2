@@ -1,0 +1,70 @@
+#version=RHEL8
+# https://access.redhat.com/labs/kickstartconfig/
+# System authorisation information
+auth --useshadow --passalgo=sha512
+# Use network installation
+url --url="ftp://{{ pxe_server_ip }}/pub"
+repo --name="AppStream" --baseurl=ftp://{{ pxe_server_ip }}/pub/AppStream
+
+# Use graphical install
+graphical
+# Keyboard layouts
+keyboard us
+# System language
+lang en_US.UTF-8
+# SELinux configuration
+selinux --enforcing
+# Firewall configuration
+firewall --enabled --ssh
+firstboot --disable
+
+# Network information
+network --bootproto dhcp
+
+# Reboot after installation
+reboot
+
+# Root password
+rootpw --iscrypted {{ encrypted_pw }}
+user --groups=wheel --name={{ user_name }} --password={{ encrypted_pw }} --iscrypted --gecos="{{ user_gecos }}"
+
+# System timezone
+timezone America/Chicago --isUtc
+# System bootloader configuration
+ignoredisk --only-use={{ storage_device }}
+bootloader --location=mbr --timeout=1 --boot-drive={{ storage_device }}
+zerombr
+clearpart --all --initlabel
+
+# Disk partitioning information
+autopart --type=lvm --nohome
+## part /boot --fstype="xfs" --ondisk={{ storage_device }} --size=1024 --label=boot --asprimary
+## part pv.01 --fstype="lvmpv" --ondisk={{ storage_device }} --size=15359
+## volgroup vg_os pv.01
+## logvol /tmp  --fstype="xfs" --size=1024 --label="lv_tmp" --name=lv_tmp --vgname=vg_os
+## logvol /  --fstype="xfs" --size=14331 --label="lv_root" --name=lv_root --vgname=vg_os
+
+%packages
+@^minimal-environment
+
+%end
+
+%addon com_redhat_kdump --disable --reserve-mb='auto'
+
+%end
+
+%post
+/bin/mkdir /home/{{ user_name }}/.ssh
+/bin/chmod 700 /home/{{ user_name }}/.ssh
+/bin/echo {{ SSH_KEY }} > /home/{{ user_name }}/.ssh/authorized_keys
+/bin/chown -R {{ user_uid }}:{{ user_uid }} /home/{{ user_uid }}/.ssh
+/bin/chmod 0400 /home/{{ user_uid }}/.ssh/*
+/bin/echo "{{ user_name }} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/{{ user_name }} ; \
+%end
+
+
+%anaconda
+pwpolicy root --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+pwpolicy user --minlen=6 --minquality=1 --notstrict --nochanges --emptyok
+pwpolicy luks --minlen=6 --minquality=1 --notstrict --nochanges --notempty
+%end
