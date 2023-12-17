@@ -44,10 +44,11 @@ SSH_KEY: <<REDACTED>>
 ```
 ```bash
 python -c 'import crypt,getpass;pw=getpass.getpass();print(crypt.crypt(pw) if (pw==getpass.getpass("Confirm: ")) else exit())'
+```
 Password:
 Confirm:
 "Encrypted password is displayed"
-```
+
 This generates a sha512 crypt-compatible hash of your password using a random salt.
 Place the value that is displayed in the configuration file in the place of the string "<<Redacted>>"
 
