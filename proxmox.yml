@@ -9,9 +9,14 @@
         path: /etc/pve
       register: is_proxmox
 
+    - name: Fail if not Debian
+      fail:
+        msg: This Playbook is not intended for {{ hostvars[inventory_hostname].TYPE }} hosts
+      when:  not hostvars[inventory_hostname].TYPE == "debian"
+
     - name: Fail if already Proxmox host
       fail:
-        msg: This Playbook is intended for Debian 12 hosts only.  
+        msg: This Playbook is intended for Debian 12 hosts without proxmox only.  
       when: is_proxmox.stat.exists
 
     - name: Add the Proxmox VE repository
