@@ -27,6 +27,9 @@ Full instructions on editing these files are in [config.md](config.md).
 6.  Like the the first step, if you have a plain Debian 12 server, you can skip the previous setup and just execute the proxmox install playbook. Follow the instructions for [proxmox.yml](proxmox.md)
 7.  Finally to optionally enable HBA mode on your p410 controller please follow this [p410.yml](p410.md)
 
+## A final word
+
+Reboots on these old HP servers take a *long* time. Downloading the distributions also take a while. The automated installations, can take quite a while, don't interupt the process. Unless the playbooks puts out an error, this old rusty iron is still working. Be patient, good luck!!
 
 ### License
 
