@@ -46,7 +46,9 @@ SSH_KEY: <<REDACTED>>
 python -c 'import crypt,getpass;pw=getpass.getpass();print(crypt.crypt(pw) if (pw==getpass.getpass("Confirm: ")) else exit())'
 ```
 Password:
+
 Confirm:
+
 "Encrypted password is displayed"
 
 This generates a sha512 crypt-compatible hash of your password using a random salt.
