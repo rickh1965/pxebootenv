@@ -31,7 +31,7 @@ network --bootproto=static --device={{ pxe_server_nic }} --gateway={{ dhcp_gw }}
 network --hostname={{ pxe_server_name }}
 
 # Use network installation
-url --url="http://dl.rockylinux.org/vault/rocky/8.6/BaseOS/$basearch/os/"
+url --url="http://dl.rockylinux.org/vault/rocky/8.6/BaseOS/x86_64/os/"
 repo --name="BaseOS" --baseurl=http://dl.rockylinux.org/vault/rocky/8.6/BaseOS/$basearch/os/ --cost=200
 repo --name="AppStream" --baseurl=http://dl.rockylinux.org/vault/rocky/8.6/AppStream/$basearch/os/ --cost=200
 
