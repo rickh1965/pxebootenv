@@ -89,7 +89,7 @@
 
 - name: Create generic kickstart file
   template:
-    src: templates/ks.cfg.j2
+    src: templates/generic.cfg.j2
     dest: /var/ftp/pub/ks/ks.cfg
     owner: root
     group: root
