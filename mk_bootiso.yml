@@ -14,10 +14,10 @@
     
     - name: Download Rocky Linux distribution
       get_url:
-        url: "{{ linux_iso }}"
-        dest: "{{ iso_target }}"
+        url: "{{ pxe_linux_iso }}"
+        dest: "{{ pxe_iso_target }}"
         mode: '0644'
-        checksum: "{{ rockyiso_sum }}"
+        checksum: "{{ pxe_rockyiso_sum }}"
     
     - name: Make mounting directory
       ansible.builtin.file:
@@ -28,7 +28,7 @@
     - name: Mount ISO file locally
       ansible.posix.mount:
         path: "{{ mount_dir }}"
-        src: "{{ iso_target }}"
+        src: "{{ pxe_iso_target }}"
         fstype: iso9660
         opts: ro
         fstab: /tmp/tmp.fstab
@@ -59,7 +59,7 @@
         state: absent
     
     - name: blkid info from downloaded ISO
-      shell: 'blkid "{{ iso_target }}"'
+      shell: 'blkid "{{ pxe_iso_target }}"'
       register: results
     
     - name: Parse out Volume Label from blkid
@@ -78,7 +78,7 @@
     
           ## - name: Remove ISO download from filesystem
           ## file:
-          ## path: "{{ iso_target }}" 
+          ## path: "{{ pxe_iso_target }}" 
           ## state: absent
     
     - name: remove default option - isolinux/isolinux.cfg
