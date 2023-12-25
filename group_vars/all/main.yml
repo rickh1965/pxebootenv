@@ -36,9 +36,12 @@ TYPE: "debian"
 BOOT: "sda"
 
 #################### variables for mounting Rocky Linux ISO
-linux_iso: https://dl.rockylinux.org/vault/rocky/8.6/isos/x86_64/Rocky-x86_64-minimal.iso
-iso_target: /tmp/Rocky-x86_64-minimal.iso
-rockyiso_sum: sha256:a9ece0e810275e881abfd66bb0e59ac05d567a5ec0bc2f108b9a3e90bef5bf94
++linux_iso: https://dl.rockylinux.org/vault/rocky/8.6/isos/x86_64/Rocky-8.6-x86_64-dvd1.iso
++iso_target: /tmp/Rocky-x86_64-dvd1.iso
++rockyiso_sum: sha256:1d48e0af63d07ff4e582a1819348e714c694e7fd33207f48879c2bc806960786
++pxe_linux_iso: https://dl.rockylinux.org/vault/rocky/8.6/isos/x86_64/Rocky-x86_64-minimal.iso
++pxe_iso_target: /tmp/Rocky-x86_64-minimal.iso
++pxe_rockyiso_sum: sha256:a9ece0e810275e881abfd66bb0e59ac05d567a5ec0bc2f108b9a3e90bef5bf94
 mount_dir: /temp_mnt
 
 #################### variables for mounting Debian ISO
