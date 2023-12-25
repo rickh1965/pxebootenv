@@ -5,6 +5,7 @@ auth --useshadow --passalgo=sha512
 # Use network installation
 url --url="ftp://{{ pxe_server_ip }}/pub"
 repo --name="AppStream" --baseurl=ftp://{{ pxe_server_ip }}/pub/AppStream
+repo --name="baseos" --baseurl=ftp://{{ pxe_server_ip }}/pub/BaseOS
 
 # Use graphical install
 graphical
@@ -19,7 +20,7 @@ firewall --enabled --ssh
 firstboot --disable
 
 # Network information
-network --device {{ hostvars[item].NIC }} --bootproto static --ip {{ hostvars[item].IP }} --netmask {{ netmask }} --gateway {{ dhcp_gw }} --nameserver {{ dns_ip }} --hostname {{ hostvars[item] }}
+network --device {{ hostvars[item].NIC }} --bootproto static --ip {{ hostvars[item].IP }} --netmask {{ netmask }} --gateway {{ dhcp_gw }} --nameserver {{ dns_ip }} --hostname {{ hostvars[item].inventory_hostname }}
 
 # Reboot after installation
 reboot
@@ -27,7 +28,6 @@ reboot
 # Root password
 rootpw --iscrypted {{ encrypted_pw }}
 user --groups=wheel --name={{ user_name }} --password={{ encrypted_pw }} --iscrypted --gecos="{{ user_gecos }}"
-sshkey --username={{ user_name }} "{{ SSH_KEY }}"
 
 # System timezone
 timezone America/Chicago --isUtc
@@ -39,11 +39,6 @@ clearpart --all --initlabel
 
 # Disk partitioning information
 autopart --type=lvm --nohome
-## part /boot --fstype="xfs" --ondisk={{ BOOT }} --size=1024 --label=boot --asprimary
-## part pv.01 --fstype="lvmpv" --ondisk={{ BOOT }} --size=15359
-## volgroup vg_os pv.01
-## logvol /tmp  --fstype="xfs" --size=1024 --label="lv_tmp" --name=lv_tmp --vgname=vg_os
-## logvol /  --fstype="xfs" --size=14331 --label="lv_root" --name=lv_root --vgname=vg_os
 
 %packages
 @^minimal-environment
@@ -55,13 +50,12 @@ autopart --type=lvm --nohome
 %end
 
 %post
-## /bin/mkdir /home/{{ user_name }}/.ssh
-## /bin/chmod 700 /home/{{ user_name }}/.ssh
-## /bin/echo {{ SSH_KEY }} > /home/{{ user_name }}/.ssh/authorized_keys
-## /bin/chown -R {{ user_uid }}:{{ user_uid }} /home/{{ user_uid }}/.ssh
-## /bin/chmod 0400 /home/{{ user_uid }}/.ssh/*
+/bin/mkdir /home/{{ user_name }}/.ssh
+/bin/chmod 700 /home/{{ user_name }}/.ssh
+/bin/echo {{ SSH_KEY }} > /home/{{ user_name }}/.ssh/authorized_keys
+/bin/chown -R {{ user_uid }}:{{ user_uid }} /home/{{ user_uid }}/.ssh
+/bin/chmod 0400 /home/{{ user_uid }}/.ssh/*
 /bin/echo "{{ user_name }} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/{{ user_name }} ; \
-## /sbin/restorecon -R /home/{{ user_name }}/.ssh
 %end
 
 %anaconda
