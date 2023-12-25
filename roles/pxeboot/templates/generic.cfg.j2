@@ -53,8 +53,8 @@ autopart --type=lvm --nohome
 /bin/mkdir /home/{{ user_name }}/.ssh
 /bin/chmod 700 /home/{{ user_name }}/.ssh
 /bin/echo {{ SSH_KEY }} > /home/{{ user_name }}/.ssh/authorized_keys
-/bin/chown -R {{ user_uid }}:{{ user_uid }} /home/{{ user_uid }}/.ssh
-/bin/chmod 0400 /home/{{ user_uid }}/.ssh/*
+/bin/chown -R {{ user_uid }}:{{ user_uid }} /home/{{ user_name }}/.ssh
+/bin/chmod 0400 /home/{{ user_name }}/.ssh/*
 /bin/echo "{{ user_name }} ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers.d/{{ user_name }} ; \
 %end
 
