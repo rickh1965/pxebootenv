@@ -46,7 +46,6 @@
           - proxmox-ve
           - postfix
           - open-iscsi
-          - ifupdown2
           - chrony
         state: latest
     
