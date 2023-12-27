@@ -14,11 +14,6 @@
         msg: This Playbook is not intended for {{ hostvars[inventory_hostname].TYPE }} hosts
       when:  not hostvars[inventory_hostname].TYPE == "debian"
 
-    - name: Fail if already Proxmox host
-      fail:
-        msg: This Playbook is intended for Debian 12 hosts without proxmox only.  
-      when: is_proxmox.stat.exists
-
     - name: Add the Proxmox VE repository
       lineinfile:
         path: /etc/apt/sources.list.d/pve-install-repo.list
@@ -36,9 +31,11 @@
       apt:
         upgrade: full
         update_cache: yes
-    
-    - name: Unconditionally reboot the machine with all defaults
+      register: needed_update
+
+    - name: reboot the machine if any packages were installed
       ansible.builtin.reboot:
+      when: needed_update.changed
     
     - name: Install the Proxmox VE packages
       ansible.builtin.apt:
@@ -48,6 +45,7 @@
           - open-iscsi
           - chrony
         state: latest
+      register: packages_installed
     
     - name: Remove the Debian Kernel
       ansible.builtin.apt:
@@ -56,21 +54,33 @@
           - 'linux-image-6.1*'
         state: absent
     
-    - name: update-grub
+    - name: update-grub if this is a new Proxmox installation
       shell: update-grub
+      when: packages_installed.changed
     
     - name: Remove the Debian Kernel
       ansible.builtin.apt:
         name:
           - os-prober
         state: absent
-    
+
     - name: Fix enterprise repo to remove enterprise sub
       ansible.builtin.replace:
         path: /etc/apt/sources.list.d/pve-enterprise.list
         regexp: '^deb'
         replace: '#deb'
+
+    - name: Install bridge-utils package
+      apt:
+        name: bridge-utils
+        state: present
+
+    - name: Configure Linux bridge vmbr0 per Proxmox documentation
+      template:
+        src: roles/pxeboot/templates/interfaces.j2
+        dest: /etc/network/interfaces
+      register: interfaces_file
     
-    - name: Unconditionally reboot the machine with all defaults
+    - name: reboot the machine if any packages were installed
       ansible.builtin.reboot:
-    
+      when: interfaces_file.changed

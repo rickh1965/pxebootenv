@@ -1,0 +1,19 @@
+source /etc/network/interfaces.d/*
+
+auto lo
+iface lo inet loopback
+
+allow-hotplug {{ hostvars[inventory_hostname].NIC }}
+iface {{ hostvars[inventory_hostname].NIC }} inet manual
+
+auto vmbr0
+iface vmbr0 inet static
+	address {{ hostvars[inventory_hostname].IP }}/24
+	gateway {{ dhcp_gw }}
+	dns-nameservers {{ dns_ip }}
+	dns-search {{ dhcp_domain }}
+	bridge_ports {{ hostvars[inventory_hostname].NIC }}
+	bridge_stp off
+	bridge_fd 0
+	bridge-vlan-aware yes
+	bridge-vids 2-4094
