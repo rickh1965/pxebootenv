@@ -60,25 +60,33 @@ This gets you a PXE boot server that can load interactive or basic automated ins
 
 ## Defining Servers in your environment
 
-The base defaults file comes with two server definitions. You will only need to know the IP, MAC, NIC name to complete this section. You are also required to supply if the server will be a Rocky Linux or Debian server.
+The base defaults file comes with two server definitions. You will only need to know the IP, MAC, NIC name to complete this section. You are also required to supply if the server will be a Rocky Linux or Debian server.  The "managed_servers" section contains those servers which will be operated on. This will create the menu files in PXE and also is the list of servers to be configured when using proxmox.yml and p410.yml.
 
 This example is from the default setup:
 
 ```yaml
-servers:
-  hostname: 
-    - testpve.home.lan:
-      - Server_IP: 192.168.1.21
-      - Server_MAC: 40-a8-f0-40-43-86
-      - Server_NIC: eno1
-      - Server_TYPE: debian
-      - Server_boot: sda
-    - testrl.home.lan:
-      - Server_IP: 192.168.1.11
-      - Server_MAC: f8-b1-56-a8-20-b4
-      - Server_NIC: eno1
-      - Server_TYPE: rocky
-      - Server_boot: sda
+all:
+  hosts:
+  children:
+    pxe:
+      hosts:
+        pxe.home.lan:
+    managed_servers:
+      hosts:
+        testdeb.home.lan:
+          IP: 10.0.20.91
+          MAC: 40-a8-f0-40-43-86
+          NIC: eno1
+          boot: sda
+          P410: no
+          TYPE: debian
+        testrl.home.lan:
+          IP: 10.0.20.92
+          MAC: f8-b1-56-a8-20-b4
+          NIC: eno1
+          boot: sda
+          P410: no
+          TYPE: rocky
 ```
 
 ### Sources
