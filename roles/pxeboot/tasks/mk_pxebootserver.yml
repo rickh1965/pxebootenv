@@ -40,13 +40,14 @@
     group: root
     mode: 0644
 
-- name: Download Rocky Linux distribution
+- name: Download Rocky Linux dvd distribution (11 GB)
   get_url:
     url: "{{ linux_iso }}"
     dest: "{{ iso_target }}"
     mode: '0644'
     tmp_dest: /tmp/
     checksum: "{{ rockyiso_sum }}"
+  retries: 5
 
 - name: Mount ISO file locally
   ansible.posix.mount:
@@ -148,12 +149,14 @@
     url: "{{ debian_net_installer }}"
     dest: "{{ net_boot }}"
     mode: '0644'
+  retries: 5
 
 - name: Add debian 64-bit nonfree firmware
   get_url:
     url: "{{ debian_nonfree }}"
     dest: "{{ net_boot_fw }}"
     mode: '0644'
+  retries: 5
 
 - name: Extract netboot.tar.gz into CWD
   ansible.builtin.unarchive:
@@ -187,6 +190,7 @@
     url: "{{ debian_iso }}"
     dest: "{{ debian_iso_target }}"
     mode: '0644'
+  retries: 5
 
 - name: Mount ISO file locally
   ansible.posix.mount:
