@@ -8,7 +8,7 @@ Only two files need editing.
 ```
 ## Role Variables
 
-To install your very own PXE boot server, make sure that your router  or anything else is not already serving DNS on the network you will install this server on.  You will need the following information about you site to build this PXE Boot Server. The SSH_KEY variable will allow the user on your bastion server to directly log into the newly configured host and will automatically be allowed passwordless sudo privledges. Do not define this value if that is not wanted.
+To install your very own PXE boot server, make sure that your router  or anything else is not already serving DHCP on the network you will install this server on.  You will need the following information about you site to build this PXE Boot Server. The SSH_KEY variable will allow the user on your bastion server to directly log into the newly configured host and will automatically be allowed passwordless sudo privledges. Do not define this value if that is not wanted.
 
 This file is located in 
 ``` group_vars/all/main.yml```
