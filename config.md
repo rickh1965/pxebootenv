@@ -8,7 +8,7 @@ Only two files need editing.
 ```
 ## Role Variables
 
-To install your very own PXE boot server, make sure that your router  or anything else is not already serving DHCP on the network you will install this server on.  You will need the following information about you site to build this PXE Boot Server. The SSH_KEY variable will allow the user on your bastion server to directly log into the newly configured host and will automatically be allowed passwordless sudo privledges. Do not define this value if that is not wanted.
+To install your very own PXE boot server, make sure that your router or anything else is not already serving DHCP on the network you will install this server on.  You will need the following information about your site to build this PXE Boot Server. The SSH_KEY variable will allow the user on your bastion server to directly log into the newly configured host and will automatically be allowed passwordless sudo privledges. Do not define this value if that is not wanted.
 
 This file is located in 
 ``` group_vars/all/main.yml```
@@ -54,8 +54,6 @@ Confirm:
 This generates a sha512 crypt-compatible hash of your password using a random salt.
 Place the value that is displayed in the configuration file in the place of the string "<<Redacted>>"
 
-
-
 This gets you a PXE boot server that can load interactive or basic automated installations of both Rocky Linux 8.6 or Debian 12.2. 
 
 ## Defining Servers in your environment
@@ -78,7 +76,7 @@ all:
           MAC: 40-a8-f0-40-43-86
           NIC: eno1
           boot: sda
-          P410: no
+          P410: yes
           TYPE: debian
         testrl.home.lan:
           IP: 10.0.20.92
@@ -88,14 +86,6 @@ all:
           P410: no
           TYPE: rocky
 ```
-
-### Sources
-
-The preseed file used that turns a debian install into a debian server in this playbook I got with very minmal changes from here:
-
-https://forum.debian.com/threads/pve-7-unattended-install.93658/
-
-All the credit in the world goes to [dakobg](https://forum.debian.com/members/dakobg.125981/).
 
 ### License
 
