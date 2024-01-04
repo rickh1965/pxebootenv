@@ -7,6 +7,7 @@
   dnf:
     name:
     - dnsmasq
+    - firewalld
     - syslinux
     - tftp-server
     - vsftpd
@@ -117,6 +118,12 @@
     regexp: '^anonymous_enable='
     line: anonymous_enable=YES
 
+- name: unconditionally restart and enable firewalld
+  ansible.builtin.service:
+    name: firewalld
+    state: restarted
+    enabled: true
+
 - name: open ports for PXE boot 
   ansible.posix.firewalld:
     port: "{{ item }}"
@@ -124,8 +131,8 @@
     immediate: yes
     state: enabled
   with_items:
-    - 69/udp  
-    - 4011/udp  
+    - 69/udp
+    - 4011/udp
 
 - name: open services for PXE boot 
   ansible.posix.firewalld:
